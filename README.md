@@ -13,7 +13,7 @@ bokeh in order to create a variety of NBA shot charts using Python.
 the necessary data for creating shot charts.
 
 Just note that this library is in early development but it should work for Python
-2.7 and 3.3+. Most of the code is based off my 
+2.7 and 3.3+. Most of the code is based on my 
 [blog post](http://savvastjortjoglou.com/nba-shot-sharts.html).
 
 
