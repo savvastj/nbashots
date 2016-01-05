@@ -2,14 +2,14 @@ nba_shot_charts
 =======================================
 
 <div class="row">
-<img src="https://i.imgur.com/Hg4gg6T.png" height="204" width="209">
-<img src="https://i.imgur.com/Fc3ZTTP.png" height="204" width="209">
-<img src="https://i.imgur.com/xw0Jlm3.png" height="204" width="209">
+<img src="https://i.imgur.com/Hg4gg6T.png" height="306" width="313.5">
+<img src="https://i.imgur.com/Fc3ZTTP.png" height="306" width="313.5">
+<img src="https://i.imgur.com/xw0Jlm3.png" height="306" width="313.5">
 </div>
 
-nba_shot_charts is a library that is built on top of matplotlib, seaborn, and
+`nba_shot_charts` is a library that is built on top of matplotlib, seaborn, and
 bokeh in order to create a variety of NBA shot charts using Python.
-nba_shot_charts allows for easy access to the NBA stats API in order to extract
+`nba_shot_charts` allows for easy access to the NBA stats API in order to extract
 the necessary data for creating shot charts.
 
 Just note that this library is in early development but it should work for Python
