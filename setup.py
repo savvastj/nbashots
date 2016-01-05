@@ -23,7 +23,7 @@ setup(
     description='A visualization library that helps create NBA player shot charts.',
     long_description=long_description,
 
-    packages=find_packages(["src"]),
+    packages=find_packages("src"),
 
     # The project's main homepage.
     url='https://github.com/savvastj/nbashots',
