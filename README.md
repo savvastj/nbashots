@@ -1,4 +1,4 @@
-nba_shot_charts
+nbashots
 =======================================
 
 <div class="row">
