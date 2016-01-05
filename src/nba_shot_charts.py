@@ -5,24 +5,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle, Arc
 import seaborn as sns
-from bokeh.plotting import figure
+from bokeh.plotting import figure, ColumnDataSource
+from bokeh.models import HoverTool
 from math import pi
 
 try:
-    from urllib import urlretrieve # python 2 compatible
+    from urllib import urlretrieve  # python 2 compatible
 except:
-    from urllib.request import urlretrieve # python 3 compatible
+    from urllib.request import urlretrieve  # python 3 compatible
 
 sns.set_style('white')
 sns.set_color_codes()
-
-
-class NoPlayerError(Exception):
-    """Custom Exception for invalid player search in get_player_id()"""
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)
 
 
 class Shots(object):
@@ -82,11 +75,6 @@ class Shots(object):
 
         self.response = requests.get(self.base_url, params=self.url_paramaters)
 
-    def change_params(self, parameters):
-        """Pass in a disctionary of url parameters to change"""
-        self.url_paramaters.update(parameters)
-        self.response = requests.get(self.base_url, params=self.url_paramaters)
-
     def get_shots(self):
         """Returns the shot chart data as a pandas DataFrame."""
         shots = self.response.json()['resultSets'][0]['rowSet']
@@ -100,25 +88,23 @@ class Shots(object):
         return pd.DataFrame(shots, columns=headers)
 
 
-def get_player_id(player="SHOTS"):
+def get_all_player_ids(ids="shots"):
     """
-    Loads a pandas DataFrame, numpy array, or int with the desired player ID(s)
-    from an online repository.
-
-    The player IDs are used to identify players in the NBA stats api.
+    Returns a pandas DataFrame containing the player IDs used in the
+    stats.nba.com API.
 
     Parameters
     ----------
-    player : str
-        The desired player's name in 'Last Name, First Name' format. Passing in
-        a single name returns a numpy array containing all the player IDs
-        associated with that name.
+    ids : { "shots" | "all_players" | "all_data" }, optional
+        Passing in "shots" returns a DataFrame that contains the player IDs of
+        all players have shot chart data.  It is the default parameter value.
 
-        Passing "SHOTS" returns a DataFrame with all the players and their IDs
-        that have shot chart data.
+        Passing in "all_players" returns a DataFrame that contains
+        all the player IDs used in the stats.nba.com API.
 
-        Passing in "ALL" returns a DataFrame with all the available player IDs
-        used by the NBA stats API, along with additional information.
+        Passing in "all_data" returns a DataFrame that contains all the data
+        accessed from the JSON at the following url:
+        http://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=0&LeagueID=00&Season=2015-16
 
         The column information for this DataFrame is as follows:
             PERSON_ID: The player ID for that player
@@ -128,57 +114,102 @@ def get_player_id(player="SHOTS"):
             FROM_YEAR: The first year the player played.
             TO_YEAR: The last year the player played.
             PLAYERCODE: A code representing the player. Unsure of its use.
-    """
 
+    Returns
+    -------
+    df : pandas DataFrame
+        The pandas DataFrame object that contains the player IDs for the
+        stats.nba.com API.
+
+    """
     url = "http://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=0&LeagueID=00&Season=2015-16"
 
     # get the web page
     response = requests.get(url)
-    # access 'resultSets', which is a list containing the dict with all the data.
+    # access 'resultSets', which is a list containing the dict with all the data
     # The 'header' key accesses the headers
     headers = response.json()['resultSets'][0]['headers']
     # The 'rowSet' key contains the player data along with their IDs
     players = response.json()['resultSets'][0]['rowSet']
     # Create dataframe with proper numeric types
-    players_df = pd.DataFrame(players, columns=headers)
-    players_df = players_df.convert_objects(convert_numeric=True)
+    df = pd.DataFrame(players, columns=headers)
+    df = df.convert_objects(convert_numeric=True)
 
-    if player == "SHOTS":
-        df = players_df.query("(FROM_YEAR >= 2001) or (TO_YEAR >= 2001)").reset_index(drop=True)
+    if ids == "shots":
+        df = df.query("(FROM_YEAR >= 2001) or (TO_YEAR >= 2001)")
+        df = df.reset_index(drop=True)
         # just keep the player ids and names
-        player_ids = df.iloc[:,0:2]
-        return player_ids
-    elif player == "ALL":
-        return players_df
-    else:
-        player_id = players_df[players_df.DISPLAY_LAST_COMMA_FIRST == player].PERSON_ID
-        if len(player_id) == 1:
-            return player_id.values[0]
-        if len(player_id) == 0:
-            raise NoPlayerError('There is no player with that name.')
-        return player_id.values
+        df = df.iloc[:, 0:2]
+        return df
+    if ids == "all_players":
+        df = df.iloc[:, 0:2]
+        return df
+    if ids == "all_data":
+        return df
 
+
+def get_player_id(player):
+    """
+    Returns the player ID(s) associated with the player name that is passed in.
+
+    There are instances where players have the same name so there are multiple
+    player IDs associated with it.
+
+    Parameters
+    ----------
+    player : str
+        The desired player's name in 'Last Name, First Name' format. Passing in
+        a single name returns a numpy array containing all the player IDs
+        associated with that name.
+
+    Returns
+    -------
+    player_id : numpy array
+        The numpy array that contains the player ID(s).
+
+    """
+    players_df = get_all_player_ids("all_data")
+    player = players_df[players_df.DISPLAY_LAST_COMMA_FIRST == player]
+    # if there are no plyaers by the given name, raise an a error
+    if len(player) == 0:
+        er = "Invalid player name passed or there is no player with that name."
+        raise ValueError(er)
+    player_id = player.PERSON_ID.values
+    return player_id
+
+
+def get_all_team_ids():
+    """Returns a pandas DataFrame with all team IDs"""
+    df = get_all_player_ids("all_data")
+    df = pd.DataFrame({"TEAM_NAME": df.TEAM_NAME.unique(),
+                       "TEAM_ID": df.TEAM_ID.unique()})
+    return df
 
 
 def get_team_id(team_name):
-    # TODO: update method to access the stats API to get team IDS
-    """
-    Loads in a the desired team ID(s) from an online repository.
+    """ Returns the team ID associated with the team name that is passed in.
 
     Parameters
-    ---------
-    team_name : string
+    ----------
+    team_name : str
         The team name whose ID we want.  NOTE: Only pass in the team name
         (e.g. "Lakers"), not the city, or city and team name, or the team
-        abbreviation. Passing in just the team name returns the team ID as an
-        int.
+        abbreviation.
 
-        Passing in "ALL" returns a DataFrame with all teams and their IDs.
+
+    Returns
+    -------
+    team_id : int
+        The team ID associated with the team name.
+
     """
-    df = pd.read_csv("http://raw.githubusercontent.com/savvastj/nbaShotChartsData/master/team_id.csv")
-    if team_name == "ALL":
-        return df
-    return df[df.TEAM_NAME == team_name.capitalize()].TEAM_ID.values[0]
+    df = get_all_team_ids()
+    df = df[df.TEAM_NAME == team_name]
+    if len(df) == 0:
+        er = "Invalid team name or there is no team with that name."
+        raise ValueError(er)
+    team_id = df.TEAM_ID.iloc[0]
+    return team_id
 
 
 def get_player_img(player_id):
@@ -190,23 +221,40 @@ def get_player_img(player_id):
     ----------
     player_id: int
         The player ID used to find the image.
+
     """
     url = "http://stats.nba.com/media/players/230x185/"+str(player_id)+".png"
     img_file = str(player_id) + ".png"
     pic = urlretrieve(url, img_file)
     return pic[0]
 
+
 def draw_court(ax=None, color='gray', lw=1, outer_lines=False):
-    """
-    Returns an axes with a basketball court drawn onto to it.
+    """Returns an axes with a basketball court drawn onto to it.
 
     This function draws a court based on the x and y-axis values that the NBA
-    stats API provides for the shot chart data.  For example, the NBA stat API
-    represents the center of the hoop at the (0,0) coordinate.  Twenty-two feet
-    from the left of the center of the hoop in is represented by the (-220,0)
-    coordinates.  So one foot equals +/-10 units on the x and y-axis.
+    stats API provides for the shot chart data.  For example the center of the
+    hoop is located at the (0,0) coordinate.  Twenty-two feet from the left of
+    the center of the hoop in is represented by the (-220,0) coordinates.
+    So one foot equals +/-10 units on the x and y-axis.
 
-    TODO: explain the parameters
+    Parameters
+    ----------
+    ax : Axes, optional
+        The Axes object to plot the court onto.
+    color : matplotlib color, optional
+        The color of the court lines.
+    lw : float, optional
+        The linewidth the of the court lines.
+    outer_lines : boolean, optional
+        If `True` it draws the out of bound lines in same style as the rest of
+        the court.
+
+    Returns
+    -------
+    ax : Axes
+        The Axes object with the court on it.
+
     """
     if ax is None:
         ax = plt.gca()
@@ -274,18 +322,67 @@ def draw_court(ax=None, color='gray', lw=1, outer_lines=False):
 
 def shot_chart(x, y, kind="scatter", title="", color="b", cmap=None,
                xlim=(-250, 250), ylim=(422.5, -47.5),
-               court_color="gray", outer_lines=False, court_lw=1,
+               court_color="gray", court_lw=1, outer_lines=True,
                flip_court=False, kde_shade=True, hex_gridsize=None,
-               ax=None, **kwargs):
+               ax=None, despine=True, **kwargs):
     """
     Returns an Axes object with player shots plotted.
 
-    TODO: explain the parameters
+    Parameters
+    ----------
+
+    x, y : strings or vector
+        The x and y coordinates of the shots taken. They can be passed in as
+        vectors (such as a pandas Series) or as columns from the pandas
+        DataFrame passed into ``data``.
+    data : DataFrame, optional
+        DataFrame containing shots where ``x`` and ``y`` represent the
+        shot location coordinates.
+    kind : { "scatter", "kde", "hex" }, optional
+        The kind of shot chart to create.
+    title : str, optional
+        The title for the plot.
+    color : matplotlib color, optional
+        Color used to plot the shots
+    cmap : matplotlib Colormap object or name, optional
+        Colormap for the range of data values. If one isn't provided, the
+        colormap is derived from the valuue passed to ``color``.
+    {x, y}lim : two-tuples, optional
+        The axis limits of the plot.  The defaults represent the out of bounds
+        lines and half court line.
+    court_color : matplotlib color, optional
+        The color of the court lines.
+    court_lw : float, optional
+        The linewidth the of the court lines.
+    outer_lines : boolean, optional
+        If ``True`` the out of bound lines are drawn in same style as the rest
+        of the court.
+    flip_court : boolean, optional
+        If ``True`` orients the hoop towards the bottom of the plot.  Default
+        is ``False``, which orients the court where the hoop is towards the top
+        of the plot.
+    kde_shade : boolean, optional
+        Default is ``True``, which shades in the KDE contours.
+    hex_gridsize : int, optional
+        Number of hexagons in the x-direction.  The default is calculated using
+        the Freedman-Diaconis method.
+    ax : Axes, optional
+        The Axes object to plot the court onto.
+    despine : boolean, optional
+        If ``True``, removes the spines.
+    kwargs : key, value pairs
+        Keyword arguments for matplotlib Collection properties.
+
+
+    Returns
+    -------
+     ax : Axes
+        The Axes object with the shot chart plotted on it.
+
     """
 
     if ax is None:
         ax = plt.gca()
-
 
     if cmap is None:
         cmap = sns.light_palette(color, as_cmap=True)
@@ -306,8 +403,7 @@ def shot_chart(x, y, kind="scatter", title="", color="b", cmap=None,
         ax.scatter(x, y, c=color, **kwargs)
 
     elif kind == "kde":
-        sns.kdeplot(x, y, shade=kde_shade, cmap=cmap,
-                    ax=ax, **kwargs)
+        sns.kdeplot(x, y, shade=kde_shade, cmap=cmap, ax=ax, **kwargs)
         ax.set_xlabel('')
         ax.set_ylabel('')
 
@@ -326,21 +422,89 @@ def shot_chart(x, y, kind="scatter", title="", color="b", cmap=None,
     else:
         raise ValueError("kind must be 'scatter', 'kde', or 'hex'.")
 
+    if despine:
+        sns.despine(ax=ax, left=True, bottom=True)
+
     return ax
 
 
-def shot_chart_jointgrid(x, y, data=None, kind="scatter", title="",
-                         marginals_type="both", cmap=None, joint_color="b",
-                         marginals_color="b", xlim=(-250, 250),
-                         ylim=(422.5, -47.5), joint_kde_shade=True,
-                         marginals_kde_shade=True, hex_gridsize=None, space=0,
-                         size=(12, 11), court_color="gray", outer_lines=False,
-                         court_lw=1, flip_court=False, joint_kws=None,
-                         marginal_kws=None, **kwargs):
+def shot_chart_jointgrid(x, y, data=None, joint_type="scatter", title="",
+                         joint_color="b", cmap=None,  xlim=(-250, 250),
+                         ylim=(422.5, -47.5), court_color="gray", court_lw=1,
+                         outer_lines=True, flip_court=False,
+                         joint_kde_shade=True, hex_gridsize=None,
+                         marginals_color="b", marginals_type="both",
+                         marginals_kde_shade=True, size=(12, 11), space=0,
+                         despine=True, joint_kws=None, marginal_kws=None,
+                         **kwargs):
+
     """
     Returns a JointGrid object containing the shot chart.
 
-    TODO: explain the parameters
+    This function allows for more flexibility in customizing your shot chart
+    than the ``shot_chart_jointplot`` function.
+
+    Parameters
+    ----------
+
+    x, y : strings or vector
+        The x and y coordinates of the shots taken. They can be passed in as
+        vectors (such as a pandas Series) or as columns from the pandas
+        DataFrame passed into ``data``.
+    data : DataFrame, optional
+        DataFrame containing shots where ``x`` and ``y`` represent the shot
+        location coordinates.
+    joint_type : { "scatter", "kde", "hex" }, optional
+        The type of shot chart for the joint plot.
+    title : str, optional
+        The title for the plot.
+    joint_color : matplotlib color, optional
+        Color used to plot the shots on the joint plot.
+    cmap : matplotlib Colormap object or name, optional
+        Colormap for the range of data values. If one isn't provided, the
+        colormap is derived from the valuue passed to ``color``.
+    {x, y}lim : two-tuples, optional
+        The axis limits of the plot.  The defaults represent the out of bounds
+        lines and half court line.
+    court_color : matplotlib color, optional
+        The color of the court lines.
+    court_lw : float, optional
+        The linewidth the of the court lines.
+    outer_lines : boolean, optional
+        If ``True`` the out of bound lines are drawn in same style as the rest
+        of the court.
+    flip_court : boolean, optional
+        If ``True`` orients the hoop towards the bottom of the plot. Default is
+        ``False``, which orients the court where the hoop is towards the top of
+        the plot.
+    joint_kde_shade : boolean, optional
+        Default is ``True``, which shades in the KDE contours on the joint plot.
+    hex_gridsize : int, optional
+        Number of hexagons in the x-direction.  The default is calculated using
+        the Freedman-Diaconis method.
+    marginals_color : matplotlib color, optional
+        Color used to plot the shots on the marginal plots.
+    marginals_type : { "both", "hist", "kde"}, optional
+        The type of plot for the marginal plots.
+    marginals_kde_shade : boolean, optional
+        Default is ``True``, which shades in the KDE contours on the marginal
+        plots.
+    size : tuple, optional
+        The width and height of the plot in inches.
+    space : numeric, optional
+        The space between the joint and marginal plots.
+    despine : boolean, optional
+        If ``True``, removes the spines.
+    {joint, marginal}_kws : dicts
+        Additional kewyord arguments for joint and marginal plot components.
+    kwargs : key, value pairs
+        Keyword arguments for matplotlib Collection properties.
+
+    Returns
+    -------
+     grid : JointGrid
+        The JointGrid object with the shot chart plotted on it.
+
     """
 
     # The joint_kws and marginal_kws idea was taken from seaborn
@@ -422,33 +586,91 @@ def shot_chart_jointgrid(x, y, data=None, kind="scatter", title="",
     # Set the title above the top marginal plot
     ax.set_title(title, y=1.2, fontsize=18)
 
+    if despine:
+        sns.despine(ax=ax, left=True, bottom=True)
+
     return grid
 
 
 def shot_chart_jointplot(x, y, data=None, kind="scatter", title="", color="b",
                          cmap=None, xlim=(-250, 250), ylim=(422.5, -47.5),
-                         space=0, court_color="gray", outer_lines=False,
-                         court_lw=1, flip_court=False,
-                         size=(12, 11), **kwargs):
+                         court_color="gray", court_lw=1, outer_lines=False,
+                         flip_court=False, size=(12, 11), space=0,
+                         despine=True, joint_kws=None, marginal_kws=None,
+                         **kwargs):
     """
     Returns a seaborn JointGrid using sns.jointplot
 
-    TODO: Better documentation
-    """
+    Parameters
+    ----------
+
+    x, y : strings or vector
+        The x and y coordinates of the shots taken. They can be passed in as
+        vectors (such as a pandas Series) or as columns from the pandas
+        DataFrame passed into ``data``.
+    data : DataFrame, optional
+        DataFrame containing shots where ``x`` and ``y`` represent the
+        shot location coordinates.
+    kind : { "scatter", "kde", "hex" }, optional
+        The kind of shot chart to create.
+    title : str, optional
+        The title for the plot.
+    color : matplotlib color, optional
+        Color used to plot the shots
+    cmap : matplotlib Colormap object or name, optional
+        Colormap for the range of data values. If one isn't provided, the
+        colormap is derived from the valuue passed to ``color``.
+    {x, y}lim : two-tuples, optional
+        The axis limits of the plot.  The defaults represent the out of bounds
+        lines and half court line.
+    court_color : matplotlib color, optional
+        The color of the court lines.
+    court_lw : float, optional
+        The linewidth the of the court lines.
+    outer_lines : boolean, optional
+        If ``True`` the out of bound lines are drawn in same style as the rest
+        of the court.
+    flip_court : boolean, optional
+        If ``True`` orients the hoop towards the bottom of the plot.  Default
+        is ``False``, which orients the court where the hoop is towards the top
+        of the plot.
+    kde_shade : boolean, optional
+        Default is ``True``, which shades in the KDE contours.
+    hex_gridsize : int, optional
+        Number of hexagons in the x-direction.  The default is calculated using
+        the Freedman-Diaconis method.
+    size : tuple, optional
+        The width and height of the plot in inches.
+    space : numeric, optional
+        The space between the joint and marginal plots.
+    {joint, marginal}_kws : dicts
+        Additional kewyord arguments for joint and marginal plot components.
+    kwargs : key, value pairs
+        Keyword arguments for matplotlib Collection properties.
+
+    Returns
+    -------
+     grid : JointGrid
+        The JointGrid object with the shot chart plotted on it.
+
+   """
 
     # If a colormap is not provided, then it is based off of the color
     if cmap is None:
         cmap = sns.light_palette(color, as_cmap=True)
 
-    plot = sns.jointplot(x, y, data=None, stat_func=None, kind=kind, space=0,
-                         color=color, cmap=cmap, **kwargs)
+    if kind not in ["scatter", "kde", "hex"]:
+        raise ValueError("kind must be 'scatter', 'kde', or 'hex'.")
 
-    plot.fig.set_size_inches(size)
+    grid = sns.jointplot(x, y, data=None, stat_func=None, kind=kind, space=0,
+                         color=color, cmap=cmap, joint_kws=None,
+                         marginal_kws=None, **kwargs)
 
+    grid.fig.set_size_inches(size)
 
-    # A joint plot has 3 Axes, the first one called ax_joint 
+    # A joint plot has 3 Axes, the first one called ax_joint
     # is the one we want to draw our court onto and adjust some other settings
-    ax = plot.ax_joint
+    ax = grid.ax_joint
 
     if not flip_court:
         ax.set_xlim(xlim)
@@ -467,13 +689,16 @@ def shot_chart_jointplot(x, y, data=None, kind="scatter", title="", color="b",
     # Add a title
     ax.set_title(title, y=1.2, fontsize=18)
 
-    return plot
+    if despine:
+        sns.despine(ax=ax, left=True, bottom=True)
+
+    return grid
 
 
 def heatmap_fgp(x, y, z, bins=20, title="", cmap=plt.cm.YlOrRd,
                 xlim=(-250, 250), ylim=(422.5, -47.5),
                 facecolor='lightgray', facecolor_alpha=0.4,
-                court_color="black", outer_lines=False, court_lw=0.5,
+                court_color="black", court_lw=0.5, outer_lines=False,
                 flip_court=False, ax=None, **kwargs):
 
     """
@@ -516,19 +741,42 @@ def heatmap_fgp(x, y, z, bins=20, title="", cmap=plt.cm.YlOrRd,
 
 
 # Bokeh Shot Chart
-def bokeh_draw_court(figure, line_width=1, line_color='gray'):
-    """Returns a figure with the basketball court lines drawn onto it"""
+def bokeh_draw_court(figure, line_color='gray', line_width=1):
+    """Returns a figure with the basketball court lines drawn onto it
+
+    This function draws a court based on the x and y-axis values that the NBA
+    stats API provides for the shot chart data.  For example the center of the
+    hoop is located at the (0,0) coordinate.  Twenty-two feet from the left of
+    the center of the hoop in is represented by the (-220,0) coordinates.
+    So one foot equals +/-10 units on the x and y-axis.
+
+    Parameters
+    ----------
+    figure : Bokeh figure object
+        The Axes object to plot the court onto.
+    line_color : str, optional
+        The color of the court lines. Can be a a Hex value.
+    line_width : float, optional
+        The linewidth the of the court lines in pixels.
+
+
+    Returns
+    -------
+    figure : Figure
+        The Figure object with the court on it.
+
+    """
 
     # hoop
     figure.circle(x=0, y=0, radius=7.5, fill_alpha=0,
                   line_color=line_color, line_width=line_width)
 
     # backboard
-    figure.line(x=range(-30,31), y=-12.5, line_color=line_color)
+    figure.line(x=range(-30, 31), y=-12.5, line_color=line_color)
 
     # The paint
     # outerbox
-    figure.rect(x=0, y=47.5, width=160, height=190,fill_alpha=0, 
+    figure.rect(x=0, y=47.5, width=160, height=190, fill_alpha=0,
                 line_color=line_color, line_width=line_width)
     # innerbox
     # left inner box line
@@ -568,24 +816,55 @@ def bokeh_draw_court(figure, line_width=1, line_color='gray'):
     figure.arc(x=0, y=422.5, radius=20, start_angle=0, end_angle=pi,
                line_color=line_color, line_width=line_width)
 
-
-    # outer lines, consistting of half court lines and out of bounds
-    # lines
+    # outer lines, consistting of half court lines and out of bounds lines
     figure.rect(x=0, y=187.5, width=500, height=470, fill_alpha=0,
                 line_color=line_color, line_width=line_width)
-    
+
     return figure
 
 
-def bokeh_shot_chart(source, x="LOC_X", y="LOC_Y", fill_color="#1f77b4",
-                     fill_alpha=0.3, line_alpha=0.3, court_lw=1,
-                     court_line_color='gray'):
+def bokeh_shot_chart(data, x="LOC_X", y="LOC_Y", fill_color="#1f77b4",
+                     fill_alpha=0.3, line_alpha=0.3, court_line_color='gray',
+                     court_line_width=1, hover_tool=False, tooltips=None):
+
+    # TODO: Settings for hover tooltip
     """
     Returns a figure with both FGA and basketball court lines drawn onto it.
 
     This function expects data to be a ColumnDataSource with the x and y values
     named "LOC_X" and "LOC_Y".  Otherwise specify x and y.
+
+    Parameters
+    ----------
+
+    data : DataFrame
+        The DataFrame that contains the shot chart data.
+    x, y : str, optional
+        The x and y coordinates of the shots taken.
+    fill_color : str, optional
+        The fill color of the shots. Can be a a Hex value.
+    fill_alpha : float, optional
+        Alpha value for the shots. Must be a floating point value between 0
+        (transparent) to 1 (opaque).
+    line_alpha : float, optiona
+        Alpha value for the outer lines of the plotted shots. Must be a
+        floating point value between 0 (transparent) to 1 (opaque).
+    court_line_color : str, optional
+        The color of the court lines. Can be a a Hex value.
+    court_line_width : float, optional
+        The linewidth the of the court lines in pixels.
+    hover_tool : boolean, optional
+        If ``True``, creates hover tooltip for the plot.
+    tooltips : List of tuples, optional
+        Provides the information for the the hover tooltip.
+
+    Returns
+    -------
+    fig : Figure
+        The Figure object with the shot chart plotted on it.
+
     """
+    source = ColumnDataSource(data)
 
     fig = figure(width=700, height=658, x_range=[-250, 250],
                  y_range=[422.5, -47.5], min_border=0,
@@ -596,5 +875,9 @@ def bokeh_shot_chart(source, x="LOC_X", y="LOC_Y", fill_color="#1f77b4",
                 line_alpha=0.3)
 
     bokeh_draw_court(fig, line_color='gray')
+
+    if hover_tool:
+        hover = HoverTool(renderers=[fig.renderers[0]], tooltips=tooltips)
+        fig.add_tools(hover)
 
     return fig
