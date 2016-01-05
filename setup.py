@@ -6,25 +6,27 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 long_description = """\
-nba_shot_charts is a library that is built on top of matplotlib, seaborn, and
+nbashots is a library that is built on top of matplotlib, seaborn, and
 bokeh in order to create a variety of NBA shot charts using Python.
-nba_shot_charts allows for easy access to the NBA stats API in order to exrtact
+nbashots allows for easy access to the NBA stats API in order to exrtact
 the necessary data for creating shot charts.
 """
 
 setup(
-    name='nba_shot_charts',
+    name='nbashots',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.0a1',
+    version='0.2.0a1',
 
-    description='A visualiztion library that helps create NBA player shot charts.',
+    description='A visualization library that helps create NBA player shot charts.',
     long_description=long_description,
 
+    packages=["src"],
+
     # The project's main homepage.
-    url='https://github.com/savvastj/nba_shot_charts',
+    url='https://github.com/savvastj/nbashots',
 
     # Author details
     author='Savvas Tjortjoglou',
