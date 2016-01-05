@@ -9,7 +9,7 @@ nbashots
 
 `nbashots` is a library that is built on top of matplotlib, seaborn, and
 bokeh in order to create a variety of NBA shot charts using Python.
-`nbashotss` allows for easy access to the NBA stats API in order to extract
+`nbashots` allows for easy access to the NBA stats API in order to extract
 the necessary data for creating shot charts.
 
 Just note that this library is in early development but it should work for Python
