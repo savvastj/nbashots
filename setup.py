@@ -1,5 +1,5 @@
 # Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+from setuptools import setup
 # To use a consistent encoding
 from os import path
 
@@ -18,12 +18,10 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.0a2',
+    version='0.1.0a8',
 
     description='A visualization library that helps create NBA player shot charts.',
     long_description=long_description,
-
-    packages=find_packages("src"),
 
     # The project's main homepage.
     url='https://github.com/savvastj/nbashots',
@@ -34,6 +32,8 @@ setup(
 
     # Choose your license
     license='BSD (3-clause) "New" or "Revised License"',
+
+    packages=["nbashots"],
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
