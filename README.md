@@ -42,7 +42,7 @@ Installation
 ------------
 To install just run:
     
-    pip install nba_shot_charts
+    pip install nbashots
 
 
 TODO
