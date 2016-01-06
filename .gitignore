@@ -7,3 +7,5 @@ dist/
 __pycache__/
 *.so
 *~
+tutorial/
+.ipynb_checkpoints/

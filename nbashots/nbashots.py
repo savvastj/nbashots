@@ -87,6 +87,11 @@ class Shots(object):
         headers = self.response.json()['resultSets'][1]['headers']
         return pd.DataFrame(shots, columns=headers)
 
+    def update_params(self, parameters):
+        """Pass in a dictionary of url parameters to change"""
+        self.url_paramaters.update(parameters)
+        self.response = requests.get(self.base_url, params=self.url_paramaters)
+
 
 def get_all_player_ids(ids="shots"):
     """
