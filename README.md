@@ -44,12 +44,15 @@ To install just run:
     
     pip install nbashots
 
+Tutorial
+--------
+You can check out a tutorial I wrote up over [here](http://nbviewer.jupyter.org/github/savvastj/nbashots/blob/master/tutorial/Tutorial.ipynb).
+
 
 TODO
 ----
 
 - Finish up the documentation and create a readthedocs page.
-- Write up a tutorial in a jupyter notebook.
 - Write tests.
 
 
