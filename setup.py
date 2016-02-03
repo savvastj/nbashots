@@ -18,7 +18,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.0a8',
+    version='0.1.0a9',
 
     description='A visualization library that helps create NBA player shot charts.',
     long_description=long_description,
