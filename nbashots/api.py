@@ -168,7 +168,7 @@ class Shots(object):
                  season_type="Regular Season", game_id="", outcome="",
                  location="", month=0, season_segment="", date_from="",
                  date_to="", opp_team_id=0, vs_conference="", vs_division="",
-                 position="", rookie_year="", game_segment="", period=0,
+                 PlayerPosition="", rookie_year="", game_segment="", period=0,
                  last_n_games=0, clutch_time="", ahead_behind="", point_diff="",
                  range_type="", start_period="", end_period="", start_range="",
                  end_range="", context_filter="", context_measure="FGA"):
@@ -194,7 +194,7 @@ class Shots(object):
                                 "OpponentTeamID": opp_team_id,
                                 "VsConference": vs_conference,
                                 "VsDivision": vs_division,
-                                "Position": position,
+                                "PlayerPosition": PlayerPosition,
                                 "RookieYear": rookie_year,
                                 "GameSegment": game_segment,
                                 "Period": period,
