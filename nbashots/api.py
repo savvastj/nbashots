@@ -171,7 +171,7 @@ class Shots(object):
                  position="", rookie_year="", game_segment="", period=0,
                  last_n_games=0, clutch_time="", ahead_behind="", point_diff="",
                  range_type="", start_period="", end_period="", start_range="",
-                 end_range="", context_filter="", context_measure="FGA"):
+                 end_range="", context_filter="", context_measure="FGA", player_position=""):
 
         self.base_url = "http://stats.nba.com/stats/shotchartdetail?"
 
@@ -208,7 +208,8 @@ class Shots(object):
                                 "StartRange": start_range,
                                 "EndRange": end_range,
                                 "ContextFilter": context_filter, # unsure of what this does
-                                "ContextMeasure": context_measure
+                                "ContextMeasure": context_measure,
+                                "PlayerPosition": player_position 
                             }
 
         self.response = requests.get(self.base_url, params=self.url_paramaters,
